@@ -1,15 +1,17 @@
-import { getLatestPosts } from "./medium.js";
-import { injectContent, renderMarkdown } from "./readme.js";
+import "dotenv/config";
+import { getLatestPosts, getFollowerCount } from "./medium.js";
+import { renderMarkdown, injectContent, renderBox } from "./readme.js";
 import { getReadme, putReadme } from "./github.js";
-import dotenv from "dotenv";
-dotenv.config();
+import { updateGist } from "./gist.js";
 
 async function run() {
   const {
     MEDIUM_USERNAME,
     MEDIUM_LIMIT = "5",
     GITHUB_TOKEN,
-    GITHUB_REPOSITORY // format: owner/repo (provided by Actions)
+    GITHUB_REPOSITORY,
+    GIST_ID,
+    GH_PAT,
   } = process.env;
 
   if (!MEDIUM_USERNAME) throw new Error("Missing MEDIUM_USERNAME");
@@ -18,17 +20,43 @@ async function run() {
 
   const [owner, repo] = GITHUB_REPOSITORY.split("/");
   const posts = await getLatestPosts(MEDIUM_USERNAME, Number(MEDIUM_LIMIT));
-  const list = renderMarkdown(posts);
 
-  const { content: readme, sha } = await getReadme(owner, repo, GITHUB_TOKEN);
-  const updated = injectContent(readme, list);
+  // --- Update README ---
+  try {
+    const markdown = renderMarkdown(posts);
+    const { content: readme, sha } = await getReadme(owner, repo, GITHUB_TOKEN);
+    const updated = injectContent(readme, markdown);
 
-  if (updated.trim() === readme.trim()) {
-    console.log("No change. Skipping commit.");
-    return;
+    if (updated.trim() !== readme.trim()) {
+      await putReadme(owner, repo, GITHUB_TOKEN, updated, sha);
+      console.log("✅ README updated");
+    } else {
+      console.log("ℹ️ README already up to date");
+    }
+  } catch (err) {
+    console.error("❌ Failed to update README:", err);
   }
-  await putReadme(owner, repo, GITHUB_TOKEN, updated, sha);
-  console.log("README updated.");
+
+  // --- Update Gist (optional) ---
+  if (GIST_ID && GH_PAT) {
+    try {
+      const followers = await getFollowerCount(MEDIUM_USERNAME);
+      const box = renderBox(MEDIUM_USERNAME, followers, posts);
+
+      await updateGist({
+        gistId: GIST_ID,
+        filename: "medium-latest.md",
+        content: box,
+        token: GH_PAT,
+      });
+
+      console.log("✅ Gist updated");
+    } catch (err) {
+      console.error("❌ Failed to update Gist:", err);
+    }
+  } else {
+    console.log("ℹ️ Skipping Gist update (missing GIST_ID or GH_PAT)");
+  }
 }
 
 run().catch(err => {
