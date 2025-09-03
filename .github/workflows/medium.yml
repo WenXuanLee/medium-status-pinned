@@ -1,15 +1,14 @@
-name: Update Medium on README
+name: Update Medium on README and Gist
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]         # triggers on push
   schedule:
-    - cron: "0 */6 * * *"    # every 6 hours
-  workflow_dispatch:          # manual trigger from Actions tab
+    - cron: "0 */6 * * *"      # every 6 hours UTC
+  workflow_dispatch:            # allow manual trigger
 
 permissions:
-  contents: write             # allow updating README
+  contents: write              # for README update
 
 jobs:
   update:
@@ -20,7 +19,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -28,12 +27,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build project
         run: npm run build
 
-      - name: Update README
+      - name: Run updater (README + Gist)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        # built-in
-          MEDIUM_USERNAME: ${{ secrets.MEDIUM_USERNAME }}  # your secret
+          MEDIUM_USERNAME: ${{ secrets.MEDIUM_USERNAME }}  # your Medium handle
           MEDIUM_LIMIT: "5"
+          GIST_ID: ${{ secrets.GIST_ID }}                  # Gist ID
+          GH_PAT: ${{ secrets.GH_PAT }}                    # PAT with gist scope
+          GITHUB_REPOSITORY: ${{ github.repository }}      # owner/repo
         run: npm start
