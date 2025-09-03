@@ -1,0 +1,39 @@
+name: Update Medium on README
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 */6 * * *"    # every 6 hours
+  workflow_dispatch:          # manual trigger from Actions tab
+
+permissions:
+  contents: write             # allow updating README
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Update README
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        # built-in
+          MEDIUM_USERNAME: ${{ secrets.MEDIUM_USERNAME }}  # your secret
+          MEDIUM_LIMIT: "5"
+        run: npm start

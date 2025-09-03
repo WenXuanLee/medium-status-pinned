@@ -1,2 +1,7 @@
-# medium-status-pinned
-Use Git Actions to auto update medium stat and show on repo pinned
+# Medium → README
+
+Auto-updates latest posts.
+
+## Latest from Medium
+<!-- MEDIUM:START -->
+<!-- MEDIUM:END -->
