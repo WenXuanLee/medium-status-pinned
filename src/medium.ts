@@ -4,18 +4,27 @@ import * as cheerio from "cheerio";
 
 export type Post = { title: string; url: string; publishedAt: string };
 
+
 export async function getFollowerCount(username: string): Promise<number | null> {
   try {
-    const res = await request(`https://medium.com/@${username}`);
+    const res = await request(`https://medium.com/@${username}`, {
+      headers: { "User-Agent": "Mozilla/5.0" }
+    });
     if (res.statusCode >= 400) return null;
     const html = await res.body.text();
     const $ = cheerio.load(html);
 
-    // Medium HTML changes often; fallback selector
-    const text = $('[href$="/followers"]').text() || "";
-    const match = text.match(/[\d,]+/);
-    if (!match) return null;
-    return parseInt(match[0].replace(/,/g, ""), 10);
+    // 1) Exact profile followers link: /@<username>/followers
+    const selExact = $('a[href*="/followers"]').first().text().trim();
+
+    // 2) Fallback: any link ending with /followers that contains the word "followers"
+    const selFallback = $('a[href$="/followers"]').filter((_, el) =>
+      $(el).text().toLowerCase().includes("followers")
+    ).first().text();
+
+    const txt = (selExact || selFallback || "").replace(/\s+/g, " ").trim();
+    const m = txt.match(/\d+/);
+    return m ? parseInt(m[0], 10) : null;
   } catch {
     return null;
   }

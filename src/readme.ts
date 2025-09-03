@@ -27,11 +27,8 @@ export function renderBox(username: string, followers: number | null, posts: Pos
   });
 
   return [
-    "```text",
     head,
     follow,
-    "",
     ...lines,
-    "```"
   ].join("\n");
 }
