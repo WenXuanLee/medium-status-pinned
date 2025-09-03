@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { getLatestPosts, getFollowerCount } from "./medium.js";
-import { renderMarkdown, injectContent, renderBox } from "./readme.js";
-import { getReadme, putReadme } from "./github.js";
+import { renderBox } from "./readme.js";
 import { updateGist } from "./gist.js";
 
 async function run() {
@@ -21,23 +20,7 @@ async function run() {
   const [owner, repo] = GITHUB_REPOSITORY.split("/");
   const posts = await getLatestPosts(MEDIUM_USERNAME, Number(MEDIUM_LIMIT));
 
-  // --- Update README ---
-  try {
-    const markdown = renderMarkdown(posts);
-    const { content: readme, sha } = await getReadme(owner, repo, GITHUB_TOKEN);
-    const updated = injectContent(readme, markdown);
-
-    if (updated.trim() !== readme.trim()) {
-      await putReadme(owner, repo, GITHUB_TOKEN, updated, sha);
-      console.log("✅ README updated");
-    } else {
-      console.log("ℹ️ README already up to date");
-    }
-  } catch (err) {
-    console.error("❌ Failed to update README:", err);
-  }
-
-  // --- Update Gist (optional) ---
+  // --- Update Gist ---
   if (GIST_ID && GH_PAT) {
     try {
       const followers = await getFollowerCount(MEDIUM_USERNAME);
